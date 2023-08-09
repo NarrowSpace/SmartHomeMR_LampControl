@@ -1,13 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Net;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using UnityEngine.Experimental.GlobalIllumination;
 
-
-public class SpatialAnchorManager : MonoBehaviour
+public class HueLightManager : MonoBehaviour
 {
     public enum LaserState
     {
@@ -23,7 +20,6 @@ public class SpatialAnchorManager : MonoBehaviour
     private float thumbstickVal;
 
     private bool bubbleAllSet = false;
-    private bool hitBubbles = false;
 
     public GameObject bubbleGuideInfo;
     public GameObject bubbleMenu; // Menu displays when the bubbles are set up
@@ -31,6 +27,8 @@ public class SpatialAnchorManager : MonoBehaviour
     private int bubbleCounter = 0;
     private TextMeshProUGUI bubbleNumber;
     private LaserState currentLaserState = LaserState.NotHitting;
+
+    private GameObject lastHitBubble = null;
 
     private void Awake()
     {
@@ -47,6 +45,13 @@ public class SpatialAnchorManager : MonoBehaviour
 
     void Update()
     {
+        SetUpBubble();
+        SetupFinished();
+    }
+
+
+    void SetUpBubble()
+    {
         // 1. Get the Thumbstick Input and Adjust the Laser Length:
         thumbstickVal = OVRInput.Get(OVRInput.Axis2D.SecondaryThumbstick).y;
         float changeFactor = 0.05f;  // Control how much Input Value changes maxPointerDistance
@@ -62,7 +67,7 @@ public class SpatialAnchorManager : MonoBehaviour
 
 
         // 3. Bubble Positioning:
-        bubbleOnEndPoint.transform.position = endPoint; 
+        bubbleOnEndPoint.transform.position = endPoint;
 
         if (OVRInput.GetDown(OVRInput.Button.SecondaryIndexTrigger))
         {
@@ -76,9 +81,10 @@ public class SpatialAnchorManager : MonoBehaviour
 
             newBubble.name = "Bubble" + bubbleCounter;
         }
+    }
 
-
-
+    void SetupFinished()
+    {
         if (OVRInput.GetDown(OVRInput.Button.Two))
         {
             bubbleAllSet = true;
@@ -94,23 +100,39 @@ public class SpatialAnchorManager : MonoBehaviour
 
             if (Physics.Raycast(targetSpawnPoint.position, targetSpawnPoint.forward, out hitInfo, maxPointerDistance))
             {
-                // If the ray hit a bubble, then show the menu
                 if (hitInfo.collider.gameObject.CompareTag("Bubble"))
                 {
                     currentLaserState = LaserState.HittingBubble;
-
-                    // Set the ray's endpoint to where it hit the bubble
-                    _lineRender.SetPosition(1, hitInfo.point);
-
+                    _lineRender.SetPosition(1, hitInfo.point); // Set the ray's endpoint to where it hit the bubble
                     // Debug.Log("I HIT " + hitInfo.collider.gameObject.name);
 
                     // Extracts the 6th character which is the number from the name like "Bubble1", "Bubble2"...
                     bubbleNumber.text = " Press 'A' to Turn ON/OFF Light " + hitInfo.collider.gameObject.name.Substring(6);
+
+                    // Turn On the Point Light:
+
+                    // If there is bubble that were previously hit, turn off its light
+                    if (lastHitBubble != null)
+                    {
+                        lastHitBubble.transform.GetChild(0).GetComponent<Light>().enabled = false;
+                    }
+
+                    // if hit, Update the lastHitBubble and turn on the light
+                    lastHitBubble = hitInfo.collider.gameObject;
+                    lastHitBubble.transform.GetChild(0).GetComponent<Light>().enabled = true;
+
                 }
             }
-        }
 
+            else if (lastHitBubble != null) // if the bubble didnot hit anything
+            {
+                // If laser is not hitting any bubble, turn off the light of the last hit bubble
+                lastHitBubble.transform.GetChild(0).GetComponent<Light>().enabled = false;
+                lastHitBubble = null; // Reset the last hit bubble reference
+            }
+        }
     }
+
 
     void ShowMenu()
     {
@@ -118,10 +140,5 @@ public class SpatialAnchorManager : MonoBehaviour
         bubbleMenu.SetActive(true);
     }
 
-    void SetupFinished()
-    {
-        
-
-    }
 
 }
