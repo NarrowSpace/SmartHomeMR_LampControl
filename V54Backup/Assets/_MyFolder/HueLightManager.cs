@@ -18,6 +18,7 @@ public class HueLightManager : MonoBehaviour
     }
 
     public Transform targetSpawnPoint;
+
     private float maxPointerDistance;
     public GameObject bubbleOnEndPoint;
     public LineRenderer _lineRender;
