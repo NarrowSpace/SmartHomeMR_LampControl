@@ -4,9 +4,9 @@
 TagManager:
   serializedVersion: 2
   tags:
-  - Bubble
   - SamplesInfoPanel
   - Menu
+  - Bulbs
   layers:
   - Default
   - TransparentFX
