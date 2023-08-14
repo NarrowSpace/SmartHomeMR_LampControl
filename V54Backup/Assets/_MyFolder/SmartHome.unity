@@ -736,7 +736,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &142300852
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -760,6 +760,7 @@ MonoBehaviour:
   rHand: {fileID: 1800135229}
   lHand: {fileID: 537215320}
   rhandSkeleton: {fileID: 1800135228}
+  hueLightsController: {fileID: 814550373}
 --- !u!4 &142300853
 Transform:
   m_ObjectHideFlags: 0

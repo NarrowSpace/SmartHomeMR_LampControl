@@ -1,4 +1,4 @@
-using Oculus.Interaction.Input;
+﻿using Oculus.Interaction.Input;
 using OculusSampleFramework;
 using OVR.OpenVR;
 using System;
@@ -12,10 +12,7 @@ public class SmartHomeManager : MonoBehaviour
 {
     /// <summary>
     /// To Do List:
-    /// Pinch to grab the light bulb
-    /// 
-    /// Pinch and select
-    /// Add Hue Lights
+    /// 制作手指来控制philips Hue灯泡的亮度
     /// </summary>
 
     // Menu 
@@ -51,6 +48,9 @@ public class SmartHomeManager : MonoBehaviour
     private const float minDistance = 0.01f;
     private const float maxDistance = 0.1f;
 
+    // Philips Hue Control
+    public HueLightsController hueLightsController;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -59,12 +59,11 @@ public class SmartHomeManager : MonoBehaviour
         lightGuide.SetActive(!isMenuOn);
         rHandMenu.SetActive(!isMenuOn);
         allSetMenu.SetActive(!isMenuOn);
-
+        
         bulbs.SetActive(false);
 
         laserPointer.enabled = false;
         laserPointer.positionCount = 2;
-
     }
 
     // Update is called once per frame
@@ -107,10 +106,7 @@ public class SmartHomeManager : MonoBehaviour
     }
 
 
-    /// <summary>
-    /// Make sure that the menu is always facing the user
-    /// </summary>
-    /// <param name="menuObject"></param>
+    // This function makes sure that the menu is always facing the user
     private void MenuDisplay(GameObject menuObject)
     {
         Vector3 menuPosition = centralEyeAnchor.transform.position + centralEyeAnchor.transform.forward * 0.45f + Vector3.up * -0.13f;
@@ -118,9 +114,8 @@ public class SmartHomeManager : MonoBehaviour
         menuObject.transform.rotation = Quaternion.LookRotation(menuPosition - centralEyeAnchor.transform.position);
     }
 
-    /// <summary>
-    /// This function is controlled by the button
-    /// </summary>
+
+    // This function is controlled by the poke button
     public void LightMenuOn()
     {
         mainMenu.SetActive(!isMenuOn);
@@ -181,6 +176,7 @@ public class SmartHomeManager : MonoBehaviour
             newBulb.name = "Bulb" + bulbCounter;
             // Add Right hand controller Haptic Feedback
             StartCoroutine(TriggerHapticFeedback());
+            
         }
 
         if (OVRInput.GetDown(OVRInput.Button.Two))
@@ -205,6 +201,13 @@ public class SmartHomeManager : MonoBehaviour
                 if (hitInfo.collider.gameObject.tag == "Bulbs")
                 {
                     laserPointer.SetPosition(1, hitInfo.point);
+
+                    if(OVRInput.GetDown(OVRInput.Button.One))
+                    {
+                        //Turn On Hue Light
+                        hueLightsController.SetLightState(bulbCounter, true);
+                    }
+
                     if (!hapticTriggered)
                     {
                         StartCoroutine(TriggerHapticFeedback());
@@ -217,13 +220,10 @@ public class SmartHomeManager : MonoBehaviour
                     hapticTriggered = false; // Reset the flag if the ray is no longer hitting a "Bulbs" tagged object
                 }
             }
-
             else
             {
                 hapticTriggered = false; // Reset the flag if the ray is not hitting anything
             }
-
-
            
         }
     }
@@ -247,14 +247,6 @@ public class SmartHomeManager : MonoBehaviour
         }
     }
 
-
-    /// <summary>
-    /// Normalize the index and thumb distance between 0 and 1
-    /// </summary>
-    /// <param name="actualDist"></param>
-    /// <param name="minDist"></param>
-    /// <param name="maxDist"></param>
-    /// <returns></returns>
     private float NormalizeDistance(float actualDist, float minDist, float maxDist)
     {
         actualDist = Mathf.Clamp(actualDist, minDist, maxDist);
