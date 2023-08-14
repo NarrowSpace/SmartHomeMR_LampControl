@@ -13,8 +13,6 @@ public class HueLightsController : MonoBehaviour
     private const int minBri = 1;
     private const int maxBri = 254;
 
-    private int maxLightNum = 3;
-
     // Start is called before the first frame update
     void Start()
     {
@@ -25,11 +23,6 @@ public class HueLightsController : MonoBehaviour
     // Function to change the state of the light (on/off)
     public void SetLightState(int lightID, bool isOn)
     {
-        if (lightID > maxLightNum)
-        {
-            Debug.LogError("No such light exists!");
-            return;
-        }
 
         string jsonBody = $"{{\"on\": {isOn.ToString().ToLower()}}}";
         StartCoroutine(SendRequestToHue(lightID, jsonBody, "state change"));
