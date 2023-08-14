@@ -7,12 +7,14 @@ using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
+
 public class SmartHomeManager : MonoBehaviour
 {
     /// <summary>
     /// To Do List:
-    /// 
     /// Pinch to grab the light bulb
+    /// 
+    /// Pinch and select
     /// Add Hue Lights
     /// </summary>
 
@@ -40,6 +42,15 @@ public class SmartHomeManager : MonoBehaviour
     private bool bulbAllSet = false;
     private bool hapticTriggered = false;
 
+    // Hand Interaction
+    public OVRHand rHand;
+    public OVRHand lHand;
+
+    public OVRSkeleton rhandSkeleton;
+
+    private const float minDistance = 0.01f;
+    private const float maxDistance = 0.1f;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -53,6 +64,7 @@ public class SmartHomeManager : MonoBehaviour
 
         laserPointer.enabled = false;
         laserPointer.positionCount = 2;
+
     }
 
     // Update is called once per frame
@@ -67,6 +79,31 @@ public class SmartHomeManager : MonoBehaviour
         }
 
         CheckControllerStates();
+        GetHandData();
+    }
+
+    private void GetHandData()
+    {
+        // The codes below is the function for hands to interact with the bulbs
+        if (rHand.IsTracked)
+        {
+            Debug.Log("Right Hand is Tracked!");
+
+            Vector3 thumbTipPos = rhandSkeleton.Bones[(int)OVRSkeleton.BoneId.Hand_ThumbTip].Transform.position;
+            Vector3 indexTipPos = rhandSkeleton.Bones[(int)OVRSkeleton.BoneId.Hand_IndexTip].Transform.position;
+
+            float rawDistance = Vector3.Distance(thumbTipPos, indexTipPos);
+
+            // Normalize the distance between 0 and 1
+            float normalizedDistance = NormalizeDistance(rawDistance, minDistance, maxDistance);
+
+            Debug.Log("Distance between thumb and index is: " + normalizedDistance);
+
+            if (rHand.GetFingerIsPinching(OVRHand.HandFinger.Thumb) && rHand.GetFingerIsPinching(OVRHand.HandFinger.Index))
+            {
+                Debug.Log("I can see you are pinching your fingers!!");
+            }
+        }
     }
 
 
@@ -98,7 +135,7 @@ public class SmartHomeManager : MonoBehaviour
             lightGuide.SetActive(!isMenuOn);
             rHandMenu.SetActive(isMenuOn);
             laserPointer.enabled = true;
-            Debug.Log("Both controllers are connected");
+           // Debug.Log("Both controllers are connected");
             RTouchLaserPointer();
         }
         else
@@ -106,7 +143,7 @@ public class SmartHomeManager : MonoBehaviour
             pickupCtrller = false;
             bulbs.SetActive(false);
             laserPointer.enabled = false;
-            Debug.Log("No Controllers are connected");
+           // Debug.Log("No Controllers are connected");
         }
     }
 
@@ -155,9 +192,13 @@ public class SmartHomeManager : MonoBehaviour
 
         if (bulbAllSet)
         {
+            Debug.Log("Entered bulbAllSet condition");
+
             rHandMenu.SetActive(!isMenuOn);
             allSetMenu.SetActive(isMenuOn);
             StartCoroutine(AllSetMenuFadeOut());
+
+            // The Codes Below is the function for controllers to interact with the light bulbs
 
             if (Physics.Raycast(pos0, controllerRot * Vector3.forward, out hitInfo, maxPointerDist))
             {
@@ -181,17 +222,20 @@ public class SmartHomeManager : MonoBehaviour
             {
                 hapticTriggered = false; // Reset the flag if the ray is not hitting anything
             }
+
+
+           
         }
     }
 
-    public IEnumerator TriggerHapticFeedback()
+    private IEnumerator TriggerHapticFeedback()
     {
         OVRInput.SetControllerVibration(0.5f, 0.5f, controller);
         yield return new WaitForSeconds(0.1f);
         OVRInput.SetControllerVibration(0, 0, controller);
     }
 
-    public IEnumerator AllSetMenuFadeOut()
+    private IEnumerator AllSetMenuFadeOut()
     {
         // Pause the coroutine for few seconds 
         yield return new WaitForSeconds(5f);
@@ -202,4 +246,19 @@ public class SmartHomeManager : MonoBehaviour
             yield return new WaitForEndOfFrame();
         }
     }
+
+
+    /// <summary>
+    /// Normalize the index and thumb distance between 0 and 1
+    /// </summary>
+    /// <param name="actualDist"></param>
+    /// <param name="minDist"></param>
+    /// <param name="maxDist"></param>
+    /// <returns></returns>
+    private float NormalizeDistance(float actualDist, float minDist, float maxDist)
+    {
+        actualDist = Mathf.Clamp(actualDist, minDist, maxDist);
+        return (actualDist - minDist) / (maxDist - minDist);
+    }
+
 }
