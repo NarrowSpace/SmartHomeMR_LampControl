@@ -29,13 +29,13 @@ public class SmartHomeManager : MonoBehaviour
     private int bulbCounter = 0;
     private int bulbNum;
 
-    // Bools
+    // Bools:
     private bool isMenuOn = true;
     private bool pickupCtrller = false;
     private bool bulbAllSet = false;
     private bool hapticTriggered = false;
 
-    // Controller
+    // Controller:
     public Transform centralEyeAnchor;
     public LineRenderer laserPointer;
     private RaycastHit hitInfo;
@@ -43,7 +43,7 @@ public class SmartHomeManager : MonoBehaviour
     private float thumbVal;
     private float maxPointerDist;
 
-    // Hand Interaction
+    // Hand Interaction:
     public OVRHand rHand;
     public OVRHand lHand;
 
@@ -52,15 +52,22 @@ public class SmartHomeManager : MonoBehaviour
     private const float minDistance = 0.01f;
     private const float maxDistance = 0.1f;
 
-    // Philips Hue Control
+    // Philips Hue Control：
     public HueLightsController hueLightsController;
     private int selectedBulb = -1;
     private int brightness;
-    private bool isInBrightnessAdjustmentMode = false;
 
     [SerializeField] Image circleBri;
     [SerializeField] TextMeshProUGUI txtBriVal;
     [SerializeField] [Range(0, 1)] float briProgressBar = 0f;
+
+    // Lock Brightness
+    private bool isInBrightnessAdjustmentMode = false;
+
+    private float stableBrightnessTimer = 0f;
+    private const float timeToLockBrightness = 3f; // adjust this value as needed
+    private int previousBrightness = -1;
+    private bool isBrightnessLocked = false;
 
     // Start is called before the first frame update
     void Start()
@@ -118,26 +125,51 @@ public class SmartHomeManager : MonoBehaviour
     {
         if (rHand.IsTracked)
         {
+            // Get the position of the thumb and index tip
             Vector3 thumbTipPos = rhandSkeleton.Bones[(int)OVRSkeleton.BoneId.Hand_ThumbTip].Transform.position;
             Vector3 indexTipPos = rhandSkeleton.Bones[(int)OVRSkeleton.BoneId.Hand_IndexTip].Transform.position;
 
+            //Check if the fingers are pinching
             if (rHand.GetFingerIsPinching(OVRHand.HandFinger.Thumb) && rHand.GetFingerIsPinching(OVRHand.HandFinger.Index))
             {
                 SelectBulb(indexTipPos);
             }
 
-            if (isInBrightnessAdjustmentMode)
+            // Update the brightness and UI if the brightness has changed
+            if (isInBrightnessAdjustmentMode && !isBrightnessLocked)
             {
                 float rawDistance = Vector3.Distance(thumbTipPos, indexTipPos);
                 float normalizedDistance = NormalizeDistance(rawDistance, minDistance, maxDistance);
-                brightness = (int)Mathf.Round(normalizedDistance * 253 + 1);
-                Debug.Log("Current brightness is: " + brightness);
-                circleBri.fillAmount = normalizedDistance;
-                txtBriVal.text = brightness.ToString();
-                if (selectedBulb != -1)
+                int currentBrightness = (int)Mathf.Round(normalizedDistance * 253 + 1);
+
+                // This conditional checks if the brightness level(based on finger distance) has changed since the last frame.
+                // For small brightness changes (i.e., within the 3 unit range), this will continue to increase the stableBrightnessTimer.
+                if (Mathf.Abs(currentBrightness - previousBrightness) > 5)
                 {
-                    hueLightsController.SetLightBrightness(selectedBulb, brightness);
+                    // Set the brightness value and update display/UI
+                    SetBrightness(currentBrightness);
+                    circleBri.fillAmount = normalizedDistance;
+                    txtBriVal.text = currentBrightness.ToString();
+                    Debug.Log("Current brightness is: " + currentBrightness);
+
+                    // Reset the timer when brightness changes
+                    stableBrightnessTimer = 0f;
                 }
+
+                // if the brightness level has not changed, increase the timer
+                else
+                {
+                    stableBrightnessTimer += Time.deltaTime;
+                    // If this stable duration surpasses a defined threshold (timeToLockBrightness), the brightness is locked:
+                    if (stableBrightnessTimer >= timeToLockBrightness)
+                    {
+                        isBrightnessLocked = true;
+                        Debug.Log("Brightness locked at: " + currentBrightness);
+                    }
+                }
+
+                // Remembering Previous Brightness:
+                previousBrightness = currentBrightness;
             }
         }
     }
@@ -164,7 +196,6 @@ public class SmartHomeManager : MonoBehaviour
         }
     }
 
-
     public void OnButtonPress()
     {
         if (selectedBulb != -1)
@@ -185,12 +216,21 @@ public class SmartHomeManager : MonoBehaviour
         isInBrightnessAdjustmentMode = !isInBrightnessAdjustmentMode;  // Toggle adjustment mode
         Debug.Log("ENTER: Brightness Button Pressed");
     }
+    private void SetBrightness(int brightnessValue)
+    {
+        if(selectedBulb != -1)
+        {
+            hueLightsController.SetLightBrightness(selectedBulb, brightnessValue);
+        }
+    }
 
-    public void ExitBrigPress()
+    /*public void ExitBrigPress()
     {
         isInBrightnessAdjustmentMode = false; // Toggle adjustment mode // Toggle brightness updating
         Debug.Log("EXIT: Exit Brightness Button Pressed");
-    }
+    }*/
+
+
 
     // CONTROLLER SELECTION:
     private void RTouchLaserPointer()
