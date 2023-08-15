@@ -5,9 +5,12 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/_MyFolder/HueCtrl.unity
     guid: 410a605ff7ef833489f091a859e6d5a6
+  - enabled: 1
+    path: Assets/_MyFolder/SmartHome.unity
+    guid: 26ed7d9e6e299294284e1a8d5b75d27b
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: 629b72b951705b74a9146671da3d8a24, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: fe3a36d5a00302145823e085a5bc3a54, type: 2}

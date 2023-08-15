@@ -10,18 +10,21 @@ public class HueLightsController : MonoBehaviour
     [SerializeField]
     private string username = "q1vBE3yboLWBg8Rl5LBXx43qCf5V2bnC43c0w7wA";
 
-    private int minBri = 1;
-    private int maxBri = 254;
+    private const int minBri = 1;
+    private const int maxBri = 254;
 
-    private int minSat = 0;
-    private int maxSat = 254;
+    private const int minSat = 0;
+    private const int maxSat = 254;
+
+    private const int minHue = 0;
+    private const int maxHue = 65535;
 
     // Start is called before the first frame update
     void Start()
     {
         // Example: Turn on a specific light
-        // SetLightState(1, true);
-        // SetLightBrightness(1, 100);
+        // SetLightState(2, false);
+        // SetLightSaturation(2, 20);
     }
 
     // Function to change the state of the light (on/off)
@@ -46,6 +49,12 @@ public class HueLightsController : MonoBehaviour
         brightness = Mathf.Clamp(brightness, minBri, maxBri);
         string jsonBody = $"{{\"bri\": {brightness}}}";
         StartCoroutine(SendRequestToHue(lightID, jsonBody, "brightness change"));
+    }
+    public void SetLightHue(int lightID, int hue)
+    {
+        hue = Mathf.Clamp(hue, minHue, maxHue);
+        string jsonBody = $"{{\"hue\": {hue}}}";
+        StartCoroutine(SendRequestToHue(lightID, jsonBody, "hue change"));
     }
 
     // Generic function to send requests to the Hue bridge

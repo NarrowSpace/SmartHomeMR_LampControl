@@ -5,13 +5,17 @@ using OVR.OpenVR;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.Experimental.GraphView;
+// using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 
 public class SmartHomeManager : MonoBehaviour
 {
+    /// <summary>
+    /// Need to optimize the brightness and hue adjustment
+    /// </summary>
+
     // Menu 
     public GameObject mainMenu;
     public GameObject lightGuide;
@@ -59,7 +63,18 @@ public class SmartHomeManager : MonoBehaviour
 
     [SerializeField] Image circleBri;
     [SerializeField] TextMeshProUGUI txtBriVal;
-    [SerializeField] [Range(0, 1)] float briProgressBar = 0f;
+    // [SerializeField] [Range(0, 1)] float briProgressBar = 0f;
+
+    // Hue/Color:
+    private int hueVal;
+    private bool isInHueAdjustmentMode = false;
+    private int previousHue = -1;
+    private bool isHueLocked = false;
+    private float stableHueTimer = 0f;
+    [SerializeField] Image circleHue;
+    [SerializeField] TextMeshProUGUI txtHueVal;
+    // [SerializeField][Range(0, 1)] float hueProgressBar = 0f;
+
 
     // Lock Brightness
     private bool isInBrightnessAdjustmentMode = false;
@@ -171,6 +186,35 @@ public class SmartHomeManager : MonoBehaviour
                 // Remembering Previous Brightness:
                 previousBrightness = currentBrightness;
             }
+
+            // Update the Hue color 
+            if (isInHueAdjustmentMode && !isHueLocked)
+            {
+                float rawDistance = Vector3.Distance(thumbTipPos, indexTipPos);
+                float normalizedDistance = NormalizeDistance(rawDistance, minDistance, maxDistance);
+                int currentHue = (int)Mathf.Round(normalizedDistance * 65534);
+
+                if (Mathf.Abs(currentHue - previousHue) > 100) // 100 can be adjusted as required
+                {
+                    SetHue(currentHue);
+                    circleHue.fillAmount = normalizedDistance;
+                    txtHueVal.text = currentHue.ToString();
+                    Debug.Log("Current hue is: " + currentHue);
+
+                    // Reset the timer when hue changes
+                    stableHueTimer = 0f;
+                }
+                else
+                {
+                    stableHueTimer += Time.deltaTime;
+                    if (stableHueTimer >= timeToLockBrightness)
+                    {
+                        isHueLocked = true;
+                        Debug.Log("Hue locked at: " + currentHue);
+                    }
+                }
+                previousHue = currentHue;
+            }
         }
     }
 
@@ -224,13 +268,19 @@ public class SmartHomeManager : MonoBehaviour
         }
     }
 
-    /*public void ExitBrigPress()
+    public void HueButtonPress()
     {
-        isInBrightnessAdjustmentMode = false; // Toggle adjustment mode // Toggle brightness updating
-        Debug.Log("EXIT: Exit Brightness Button Pressed");
-    }*/
+        isInHueAdjustmentMode = !isInHueAdjustmentMode;  // Toggle adjustment mode
+        Debug.Log("ENTER: Hue Button Pressed");
+    }
 
-
+    private void SetHue(int hueValue)
+    {
+        if (selectedBulb != -1)
+        {
+            hueLightsController.SetLightHue(selectedBulb, hueValue);
+        }
+    }
 
     // CONTROLLER SELECTION:
     private void RTouchLaserPointer()
