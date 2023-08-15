@@ -10,14 +10,18 @@ public class HueLightsController : MonoBehaviour
     [SerializeField]
     private string username = "q1vBE3yboLWBg8Rl5LBXx43qCf5V2bnC43c0w7wA";
 
-    private const int minBri = 1;
-    private const int maxBri = 254;
+    private int minBri = 1;
+    private int maxBri = 254;
+
+    private int minSat = 0;
+    private int maxSat = 254;
 
     // Start is called before the first frame update
     void Start()
     {
         // Example: Turn on a specific light
-        // SetLightState(1, false);
+        // SetLightState(1, true);
+        // SetLightBrightness(1, 100);
     }
 
     // Function to change the state of the light (on/off)
@@ -26,6 +30,14 @@ public class HueLightsController : MonoBehaviour
 
         string jsonBody = $"{{\"on\": {isOn.ToString().ToLower()}}}";
         StartCoroutine(SendRequestToHue(lightID, jsonBody, "state change"));
+    }
+
+    // Function to set the saturation of a specific light
+    public void SetLightSaturation(int lightID, int saturation)
+    {
+        saturation = Mathf.Clamp(saturation, minSat, maxSat);
+        string jsonBody = $"{{\"sat\": {saturation}}}";
+        StartCoroutine(SendRequestToHue(lightID, jsonBody, "saturation change"));
     }
 
     // Function to set the brightness of a specific light

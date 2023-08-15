@@ -1,25 +1,24 @@
 ﻿using Oculus.Interaction.Input;
 using OculusSampleFramework;
+using Oculus.Interaction.Surfaces;
 using OVR.OpenVR;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
-
+using TMPro;
+using UnityEngine.UI;
 
 public class SmartHomeManager : MonoBehaviour
 {
-    /// <summary>
-    /// To Do List:
-    /// 制作手指来控制philips Hue灯泡的亮度
-    /// </summary>
-
     // Menu 
     public GameObject mainMenu;
     public GameObject lightGuide;
     public GameObject rHandMenu;
     public GameObject allSetMenu;
+    public GameObject bulbCtrlPanel;
+    public TextMeshProUGUI bulbNameText;
 
     // Menu Fade OUT
     public CanvasGroup congradulationsCanvas;
@@ -27,7 +26,6 @@ public class SmartHomeManager : MonoBehaviour
 
     // Bulb Game Objects
     public GameObject bulbs;
-    private List<GameObject> allBulbs = new List<GameObject>();
     private int bulbCounter = 0;
     private int bulbNum;
 
@@ -56,6 +54,13 @@ public class SmartHomeManager : MonoBehaviour
 
     // Philips Hue Control
     public HueLightsController hueLightsController;
+    private int selectedBulb = -1;
+    private int brightness;
+    private bool isInBrightnessAdjustmentMode = false;
+
+    [SerializeField] Image circleBri;
+    [SerializeField] TextMeshProUGUI txtBriVal;
+    [SerializeField] [Range(0, 1)] float briProgressBar = 0f;
 
     // Start is called before the first frame update
     void Start()
@@ -65,7 +70,8 @@ public class SmartHomeManager : MonoBehaviour
         lightGuide.SetActive(!isMenuOn);
         rHandMenu.SetActive(!isMenuOn);
         allSetMenu.SetActive(!isMenuOn);
-        
+        bulbCtrlPanel.SetActive(!isMenuOn);
+
         bulbs.SetActive(false);
 
         laserPointer.enabled = false;
@@ -87,22 +93,6 @@ public class SmartHomeManager : MonoBehaviour
         GetHandData();
     }
 
-    // This function makes sure that the menu is always facing the user
-    private void MenuDisplay(GameObject menuObject)
-    {
-        Vector3 menuPosition = centralEyeAnchor.transform.position + centralEyeAnchor.transform.forward * 0.45f + Vector3.up * -0.13f;
-        menuObject.transform.position = menuPosition;
-        menuObject.transform.rotation = Quaternion.LookRotation(menuPosition - centralEyeAnchor.transform.position);
-    }
-
-
-    // This function is controlled by the poke button
-    public void LightMenuOn()
-    {
-        mainMenu.SetActive(!isMenuOn);
-        lightGuide.SetActive(isMenuOn);
-    }
-
     private void CheckControllerStates()
     {
         if (OVRInput.IsControllerConnected(OVRInput.Controller.RTouch) && OVRInput.IsControllerConnected(OVRInput.Controller.LTouch))
@@ -111,7 +101,7 @@ public class SmartHomeManager : MonoBehaviour
             lightGuide.SetActive(!isMenuOn);
             rHandMenu.SetActive(isMenuOn);
             laserPointer.enabled = true;
-           // Debug.Log("Both controllers are connected");
+            // Debug.Log("Both controllers are connected");
             RTouchLaserPointer();
         }
         else
@@ -119,64 +109,87 @@ public class SmartHomeManager : MonoBehaviour
             pickupCtrller = false;
             bulbs.SetActive(false);
             laserPointer.enabled = false;
-           // Debug.Log("No Controllers are connected");
+            // Debug.Log("No Controllers are connected");
         }
     }
-    
 
-    // HAND SELECTION:
+    /// HAND SELECTION:
     private void GetHandData()
     {
-        // The codes below is the function for hands to interact with the bulbs
         if (rHand.IsTracked)
         {
-            Debug.Log("Right Hand is Tracked!");
-
             Vector3 thumbTipPos = rhandSkeleton.Bones[(int)OVRSkeleton.BoneId.Hand_ThumbTip].Transform.position;
             Vector3 indexTipPos = rhandSkeleton.Bones[(int)OVRSkeleton.BoneId.Hand_IndexTip].Transform.position;
 
-            float rawDistance = Vector3.Distance(thumbTipPos, indexTipPos);
-
-            // Normalize the distance between 0 and 1
-            float normalizedDistance = NormalizeDistance(rawDistance, minDistance, maxDistance);
-
-           // Debug.Log("Distance between thumb and index is: " + normalizedDistance);
-
             if (rHand.GetFingerIsPinching(OVRHand.HandFinger.Thumb) && rHand.GetFingerIsPinching(OVRHand.HandFinger.Index))
             {
-                Debug.Log("I can see you are pinching your fingers!!");
-                Vector3 pinchPoint = (thumbTipPos + indexTipPos) / 2;
-                // Vector3 rayDirection = rHand.transform.forward;
-                Vector3 rayDirection = (thumbTipPos - indexTipPos).normalized; // Pointing from index to thumb
-                HandlePinchSelection(pinchPoint,rayDirection);
+                SelectBulb(indexTipPos);
+            }
+
+            if (isInBrightnessAdjustmentMode)
+            {
+                float rawDistance = Vector3.Distance(thumbTipPos, indexTipPos);
+                float normalizedDistance = NormalizeDistance(rawDistance, minDistance, maxDistance);
+                brightness = (int)Mathf.Round(normalizedDistance * 253 + 1);
+                Debug.Log("Current brightness is: " + brightness);
+                circleBri.fillAmount = normalizedDistance;
+                txtBriVal.text = brightness.ToString();
+                if (selectedBulb != -1)
+                {
+                    hueLightsController.SetLightBrightness(selectedBulb, brightness);
+                }
             }
         }
     }
 
-    private void HandlePinchSelection(Vector3 pinchPoint,Vector3 handDirection)
+    private void SelectBulb(Vector3 indexTipPos)
     {
-        RaycastHit pinchHit;
-        float pinchRayLength = 2.0f;
+        Ray ray = new Ray(indexTipPos, rHand.PointerPose.forward);
+        RaycastHit hit;
+        const float maxInteractionDistance = 5f;
 
-        // Visualize the ray in the Unity Scene view (remove this in the production build)
-        Debug.DrawRay(pinchPoint, handDirection * pinchRayLength, Color.red, 2.0f);
-
-        if (Physics.Raycast(pinchPoint, handDirection, out pinchHit, pinchRayLength))
+        if (Physics.Raycast(ray, out hit, maxInteractionDistance))
         {
-            if(pinchHit.collider.gameObject.tag == "Bulbs")
+            if (hit.collider.CompareTag("Bulbs"))
             {
-                GameObject selectedBulb = pinchHit.collider.gameObject;
+                int bulbBeingInteractedWith = GetBulbNumber(hit.collider.gameObject);
 
-                bulbNum = GetBulbNumber(pinchHit.collider.gameObject);
-                Debug.Log("Retrieved bulb number: " + bulbNum);
-
-                if (bulbNum!=-1)
+                if (bulbBeingInteractedWith != selectedBulb)
                 {
-                    Debug.Log("Bulb" +bulbNum + selectedBulb.name + "is Selected");
+                    selectedBulb = bulbBeingInteractedWith;
+                    bulbNameText.text = hit.collider.name;
+                    Debug.Log("Bulb Number is: " + selectedBulb);
                 }
-
             }
         }
+    }
+
+
+    public void OnButtonPress()
+    {
+        if (selectedBulb != -1)
+        {
+            hueLightsController.SetLightState(selectedBulb, true);
+        }
+    }
+    public void OffButtonPress()
+    {
+        if (selectedBulb != -1)
+        {
+            hueLightsController.SetLightState(selectedBulb, false);
+        }
+    }
+
+    public void BrgButtonPress()
+    {
+        isInBrightnessAdjustmentMode = !isInBrightnessAdjustmentMode;  // Toggle adjustment mode
+        Debug.Log("ENTER: Brightness Button Pressed");
+    }
+
+    public void ExitBrigPress()
+    {
+        isInBrightnessAdjustmentMode = false; // Toggle adjustment mode // Toggle brightness updating
+        Debug.Log("EXIT: Exit Brightness Button Pressed");
     }
 
     // CONTROLLER SELECTION:
@@ -212,7 +225,7 @@ public class SmartHomeManager : MonoBehaviour
             GameObject newBulb = Instantiate(bulbs, endPoint, Quaternion.identity);
 
             bulbCounter++;
-            newBulb.name = "Bulb" + bulbCounter;
+            newBulb.name = "BULB" + bulbCounter;
             bulbNum = GetBulbNumber(newBulb);
 
             // Debug.Log("*** BULB NUMBER ***: " + bulbNum);
@@ -235,6 +248,7 @@ public class SmartHomeManager : MonoBehaviour
             rHandMenu.SetActive(!isMenuOn);
             allSetMenu.SetActive(isMenuOn);
             StartCoroutine(AllSetMenuFadeOut());
+            bulbCtrlPanel.SetActive(isMenuOn);
 
             // The Codes Below is the function for controllers to interact with the light bulbs:
             if (Physics.Raycast(pos0, controllerRot * Vector3.forward, out hitInfo, maxPointerDist))
@@ -243,7 +257,7 @@ public class SmartHomeManager : MonoBehaviour
                 {
                     laserPointer.SetPosition(1, hitInfo.point);
 
-                    bulbNum = GetBulbNumber(hitInfo.collider.gameObject);
+                    // bulbNum = GetBulbNumber(hitInfo.collider.gameObject);
 
                     if (OVRInput.GetDown(OVRInput.Button.One))
                     {
@@ -271,6 +285,21 @@ public class SmartHomeManager : MonoBehaviour
                 hapticTriggered = false; // Reset the flag if the ray is not hitting anything
             }
         }
+    }
+
+    // This function makes sure that the menu is always facing the user
+    private void MenuDisplay(GameObject menuObject)
+    {
+        Vector3 menuPosition = centralEyeAnchor.transform.position + centralEyeAnchor.transform.forward * 0.4f + Vector3.up * -0.13f;
+        menuObject.transform.position = menuPosition;
+        menuObject.transform.rotation = Quaternion.LookRotation(menuPosition - centralEyeAnchor.transform.position);
+    }
+
+    // This function is controlled by the poke button
+    public void LightMenuOn()
+    {
+        mainMenu.SetActive(!isMenuOn);
+        lightGuide.SetActive(isMenuOn);
     }
 
     private IEnumerator TriggerHapticFeedback()
@@ -303,9 +332,9 @@ public class SmartHomeManager : MonoBehaviour
     private int GetBulbNumber(GameObject bulb)
     {
         string bulbName = bulb.name;
-        if (bulbName.StartsWith("Bulb"))
+        if (bulbName.StartsWith("BULB"))
         {
-            string numberString = bulbName.Replace("Bulb", "");
+            string numberString = bulbName.Replace("BULB", "");
 
             if (int.TryParse(numberString, out int bulbNumber))
             {
@@ -314,4 +343,5 @@ public class SmartHomeManager : MonoBehaviour
         }
         return -1; // Return an invalid number if parsing fails
     }
+
 }
