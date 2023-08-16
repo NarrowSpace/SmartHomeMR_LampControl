@@ -77,7 +77,6 @@ public class SmartHomeManager : MonoBehaviour
     [SerializeField] TextMeshProUGUI txtHueVal;
     // [SerializeField][Range(0, 1)] float hueProgressBar = 0f;
 
-
     // Lock Brightness
     private bool isInBrightnessAdjustmentMode = false;
 
@@ -262,7 +261,18 @@ public class SmartHomeManager : MonoBehaviour
     public void BrgButtonPress()
     {
         isInBrightnessAdjustmentMode = !isInBrightnessAdjustmentMode;  // Toggle adjustment mode
-        Debug.Log("ENTER: Brightness Button Pressed");
+        // Debug.Log("ENTER: Brightness Button Pressed");
+
+        if (isInBrightnessAdjustmentMode)
+        {
+            isInHueAdjustmentMode = false;
+
+            // reset the lock when re-entering mode
+            isBrightnessLocked = false; 
+            stableBrightnessTimer = 0f;
+        }
+
+        Debug.Log(isInBrightnessAdjustmentMode ? "ENTER: Brightness Mode" : "EXIT: Brightness Mode");
     }
     private void SetBrightness(int brightnessValue)
     {
@@ -275,7 +285,16 @@ public class SmartHomeManager : MonoBehaviour
     public void HueButtonPress()
     {
         isInHueAdjustmentMode = !isInHueAdjustmentMode;  // Toggle adjustment mode
-        Debug.Log("ENTER: Hue Button Pressed");
+
+        if (isInHueAdjustmentMode)
+        {
+            isInBrightnessAdjustmentMode = false;
+
+            // reset the lock when re-entering mode
+            isHueLocked = false; 
+            stableHueTimer = 0f;
+        }
+        Debug.Log(isInHueAdjustmentMode ? "ENTER: Hue Mode" : "EXIT: Hue Mode");
     }
 
     private void SetHue(int hueValue)
