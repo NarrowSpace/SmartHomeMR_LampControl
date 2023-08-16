@@ -13,7 +13,9 @@ using UnityEngine.UI;
 public class SmartHomeManager : MonoBehaviour
 {
     /// <summary>
+    /// TO DO LIST:
     /// Need to optimize the brightness and hue adjustment
+    /// The brightness & Hue button cannot be modified twice.
     /// </summary>
 
     // Menu 
@@ -194,7 +196,9 @@ public class SmartHomeManager : MonoBehaviour
                 float normalizedDistance = NormalizeDistance(rawDistance, minDistance, maxDistance);
                 int currentHue = (int)Mathf.Round(normalizedDistance * 65534);
 
-                if (Mathf.Abs(currentHue - previousHue) > 100) // 100 can be adjusted as required
+                Debug.Log("currentHue: " + currentHue);
+
+                if (Mathf.Abs(currentHue - previousHue) > 600) // 100 can be adjusted as required
                 {
                     SetHue(currentHue);
                     circleHue.fillAmount = normalizedDistance;
