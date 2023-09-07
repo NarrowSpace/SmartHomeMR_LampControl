@@ -6,9 +6,11 @@ using UnityEngine.Networking;
 public class HueLightsController : MonoBehaviour
 {
     [SerializeField]
-    private string bridgeIP = "10.0.0.138";
+    // private string bridgeIP = "10.0.0.138";
+    private string bridgeIP = "192.168.0.135"; //Lab Ip
     [SerializeField]
-    private string username = "q1vBE3yboLWBg8Rl5LBXx43qCf5V2bnC43c0w7wA";
+    // private string username = "q1vBE3yboLWBg8Rl5LBXx43qCf5V2bnC43c0w7wA";
+    private string username = "hdSjl9H0Lv0xy0qIEzRiFvBBZS-nEQXcZvCKAGCw"; // Lab API
 
     private const int minBri = 1;
     private const int maxBri = 254;

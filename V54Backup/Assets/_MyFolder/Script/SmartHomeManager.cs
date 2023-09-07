@@ -12,12 +12,6 @@ using UnityEngine.UI;
 
 public class SmartHomeManager : MonoBehaviour
 {
-    /// <summary>
-    /// TO DO LIST:
-    /// Need to optimize the brightness and hue adjustment
-    /// The brightness & Hue button cannot be modified twice.
-    /// </summary>
-
     // Menu 
     public GameObject mainMenu;
     public GameObject lightGuide;
@@ -79,7 +73,6 @@ public class SmartHomeManager : MonoBehaviour
 
     // Lock Brightness
     private bool isInBrightnessAdjustmentMode = false;
-
     private float stableBrightnessTimer = 0f;
     private const float timeToLockBrightness = 3f; // adjust this value as needed
     private int previousBrightness = -1;
@@ -197,7 +190,7 @@ public class SmartHomeManager : MonoBehaviour
 
                 Debug.Log("currentHue: " + currentHue);
 
-                if (Mathf.Abs(currentHue - previousHue) > 600) // 100 can be adjusted as required
+                if (Mathf.Abs(currentHue - previousHue) > 3000) 
                 {
                     SetHue(currentHue);
                     circleHue.fillAmount = normalizedDistance;
@@ -403,7 +396,7 @@ public class SmartHomeManager : MonoBehaviour
     // This function makes sure that the menu is always facing the user
     private void MenuDisplay(GameObject menuObject)
     {
-        Vector3 menuPosition = centralEyeAnchor.transform.position + centralEyeAnchor.transform.forward * 0.4f + Vector3.up * -0.13f;
+        Vector3 menuPosition = centralEyeAnchor.transform.position + centralEyeAnchor.transform.forward * 0.42f + Vector3.up * -0.1f;
         menuObject.transform.position = menuPosition;
         menuObject.transform.rotation = Quaternion.LookRotation(menuPosition - centralEyeAnchor.transform.position);
     }
