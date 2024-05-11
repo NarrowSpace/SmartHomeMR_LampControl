@@ -1,5 +1,4 @@
 # SmartHome_Phillips Hue Bulb Control
-ThesisProject
 
 Quest 2/ Unity 2022.3.01f/ Oculus Integration SDK V54
 
